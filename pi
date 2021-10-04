@@ -1,0 +1,75 @@
+#This code will be used to determine which quadrant the marker is in.
+from picamera.array import PiRGBArray
+from picamera import PiCamera
+import cv2
+from cv2 import aruco
+import numpy
+import math
+import time
+
+quad = 0
+desired = "0.00"
+prevquad = 5
+camera = PiCamera()
+rawCapture = PiRGBArray(camera)
+camera.iso = 100
+time.sleep(2)
+camera.shutter_speed = camera.exposure_speed
+camera.exposure_mode = 'off'
+gain = camera.awb_gains
+camera.awb_mode = 'off'
+camera.awb_gains = gain
+time.sleep(0.1)
+aruco_dictionary = aruco.Dictionary_get(aruco.DICT_6X6_250)
+parameters = aruco.DetectorParameters_create()
+#The above code has been taken from previous assingments to set up the camera.
+#The below code will be using aruco marker detection in order to figure out what quadrant it is. The project description 4.5 says to use aruco marker detection
+#In order to figure how to use aruco marker detection, I used this website:https://docs.opencv.org/4.5.3/d5/dae/tutorial_aruco_detection.html
+def computervision():
+    global quad
+    global desired
+    marker_found = False
+    camera.capture(rawCapture, format = "bgr")
+    image = rawCapture.array
+    display = rawCapture.array
+    cv2.cvtColor(image,cv2.COLOR_RGB2GRAY)
+    corners,ids,rejectedImgPoints = aruco.detectMarkers(image,aruco_dictionary, parameters=parameters)
+    if type(ids) == numpy.ndarray:
+        marker_found = True
+        output_array = numpy.ndarray(len(ids))
+        index = 0
+        for i in ids:
+            for j in i:
+                xdirection1 =(corners[index][0][1][0] + corners[index][0][0][0])/2
+                xdirection2 = (corners[index][0][2][0] + corners[index][0][3][0])/2
+                xcenter = (xdirection1 + xdirection2)/2
+                ydirection1 = (corners[index][0][1][1] + corners[index][0][2][1])/2
+                ydirection2 = (corners[index][0][3][1] + corners[index][0][0][1])/2
+                ycenter = (ydirection1 + ydirection2)/2
+                Xmiddleofimage = image.shape[1]/2
+                Ymiddleofimage = image.shape[0]/2
+                if xcenter > Xmiddleofimage and ycenter > Ymiddleofimage:
+                    quadrant = 1
+                    desired = "0"
+                    print("This is the quadrant: ", quadrant)
+                if xcenter < Xmiddleofimage and ycenter > Ymiddleofimage:
+                    quadrant = 2
+                    desired = "1.57"
+                    print("This is the quadrant: ", quadrant)
+                if xcenter < Xmiddleofimage and ycenter < Ymiddleofimage:
+                    quadrant = 3
+                    desired = "3.14"
+                    print("This is the quadrant: ", quadrant)
+                if xcenter > Xmiddleofimage and ycenter <Ymiddleofimage:
+                    quadrant = 4
+                    desired = "4.71"
+                    print("This is the quadrant: ", quadrant)
+                output_array[index] = j
+                index +=1
+    rawCapture.truncate(0)
+    if marker_found == False:
+        print("No markers found")
+        
+while 1 ==1:
+    computervision()
+                
