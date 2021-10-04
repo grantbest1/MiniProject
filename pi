@@ -70,6 +70,82 @@ def computervision():
     if marker_found == False:
         print("No markers found")
         
+        import smbus
+import time
+import board
+import busio
+import adafruit_character_lcd.character_lcd_rgb_i2c as character_lcd
+
+#for RPI version 1, use “bus = smbus.SMBus(0)”
+bus = smbus.SMBus(1)
+
+# Modify this if you have a different sized Character LCD
+columns = 16
+rows = 2
+
+# Initialise I2C bus.
+i2c = busio.I2C(board.SCL,board.SDA)  
+
+# Initialise the LCD class
+lcd = character_lcd.Character_LCD_RGB_I2C(i2c, columns, rows)
+
+lcd.clear()
+#this is the address we setup in the Arduino Program
+address = 0x04
+
+def writePosition(value):
+    bus.write_byte(address, value)
+    return -1
+
+def readPosition():
+    number = bus.read_byte(address)
+    return number
+
+def systemIntegration():
+    #while True:
+        #position will be the number being sent to the arduino from the camera
+        old_position = 0
+        position = quadrant
+        #if not position:
+            #continue
+        if position == old_position:
+            print ("Already at position ", position)
+            lcd.color = [0,0,100]
+            lcd.text_direction = lcd.LEFT_TO_RIGHT
+            lcd.message = "Already at pos.\n " + str(position)
+            #sleep one second
+            time.sleep(2)
+            lcd.clear()
+        else:
+            writePosition(position)
+            print ("RPI: Arduino, move to position ", position)
+            lcd.color = [100,0,0]
+            lcd.text_direction = lcd.LEFT_TO_RIGHT
+            lcd.message = "Move to pos. " + str(position)
+            #sleep one second
+            time.sleep(2)
+            lcd.clear()
+
+            number = readPosition()
+            #This is currently not needed I don't think but I don't wanna forget
+            #if number != old_position:
+#                print ("Arduino I moved back to ", old_position)
+#                lcd.color = [0,100,0]
+ #               lcd.text_direction = lcd.LEFT_TO_RIGHT
+#                lcd.message = "Moved back to\n pos. " + str(number)
+#                time.sleep(2)
+#
+            print ("Arduino: Hey RPI, I moved to ", position)
+            lcd.color = [0,100,0]
+            lcd.text_direction = lcd.LEFT_TO_RIGHT
+            lcd.message = "Moved to pos. " + str(number)
+            time.sleep(2)
+            lcd.clear()
+            lcd.color = [0,0,0]
+            old_position = position
+                                                                               
+
+        
 while 1 ==1:
     computervision()
                 
