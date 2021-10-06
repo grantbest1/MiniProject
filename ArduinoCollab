@@ -43,7 +43,7 @@ void setup() {
   pinMode(clk, INPUT);
   pinMode(dt, INPUT);
   
-  Serial.begin(250000);
+  Serial.begin(9600);
   
   md.init();
   
@@ -61,26 +61,36 @@ void setup() {
 }
 
 void loop() {
-  delay(100);
+  
   if(pos == 1){
+    Serial.println("1");
     movePos(0,rad);
   }else if(pos ==2){
+    Serial.println("2");
     movePos(PI/2,rad);
   }else if(pos==3){
+    Serial.println("3");
     movePos(PI,rad);
   }else if(pos==4){
+    Serial.println("4");
     movePos(3*PI/2,rad);
   }
 }
 
 void movePos(double goal, double current){
   diff = (goal - current);
+  
   //if diff is > 0 then it needs to move clockwise
   //if diff is < 0 then it needs to move counterclockwise
   I = I +Ts*diff;
   newOut = Kp*diff + Ki*I;
-  int deltaU= (out-newOut)*1000;
+  int deltaU= (out-newOut)*75;
+  
   md.setM1Speed(deltaU%400);
+  Serial.print(diff);
+  Serial.print(" ");
+  Serial.println(deltaU);
+  
   out=newOut;
   Ts = millis()-Tc;
   Tc = millis();
