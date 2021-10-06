@@ -1,24 +1,89 @@
 #include <Wire.h>
+#include "DualMC33926MotorShield.h"
 
+DualMC33926MotorShield md;
+
+#define clk 2
+#define dt 3
 #define SLAVE_ADDRESS 0x04
+
 int pos = 0;
 int tate = 0;
+int counter = 0;
+int currentState;
+int lastState;
+String currentDir;
+double thetaDot; // angular velocity
+
+double I = 0;
+double diff = 0;
+double Ts = 0;
+double Tc = 0;
+double out = 0;
+double newOut = 0;
+
+float rad = 0;
+
+
+//PI controller variables
+double Kp = 1.20661014500523;
+double Ki = 0.196673808561202; 
+
+void stopIfFault()
+{
+  if (md.getFault())
+  {
+    Serial.println("fault");
+    while(1);
+  }
+}
 
 void setup() {
   pinMode(13, OUTPUT);
-  Serial.begin(9600); // start serial for output
+  pinMode(clk, INPUT);
+  pinMode(dt, INPUT);
+  
+  Serial.begin(250000);
+  
+  md.init();
+  
+  lastState = digitalRead(clk);
+  attachInterrupt(digitalPinToInterrupt(2), updateEncoder, CHANGE);
   // initialize i2c as slave
   Wire.begin(SLAVE_ADDRESS);
 
   // define callbacks for i2c communication
   Wire.onReceive(receiveData);
   Wire.onRequest(sendData);
-
+  
+  Serial.println("Dual MC33926 Motor Shield");
   Serial.println("Ready!");
 }
 
 void loop() {
   delay(100);
+  if(pos == 1){
+    movePos(0,rad);
+  }else if(pos ==2){
+    movePos(PI/2,rad);
+  }else if(pos==3){
+    movePos(PI,rad);
+  }else if(pos==4){
+    movePos(3*PI/2,rad);
+  }
+}
+
+void movePos(double goal, double current){
+  diff = (goal - current);
+  //if diff is > 0 then it needs to move clockwise
+  //if diff is < 0 then it needs to move counterclockwise
+  I = I +Ts*diff;
+  newOut = Kp*diff + Ki*I;
+  int deltaU= (out-newOut)*1000;
+  md.setM1Speed(deltaU%400);
+  out=newOut;
+  Ts = millis()-Tc;
+  Tc = millis();
 }
 
 // callback for received data
@@ -33,4 +98,39 @@ void receiveData(int byteCount) {
 // callback for sending data
 void sendData() {
   Wire.write(pos);
+}
+
+void updateEncoder(){
+  currentState = digitalRead(clk);
+
+
+  if(currentState != lastState && currentState == 1){
+//    tNew = millis();
+//    deltaT = tNew - tOld;
+//    thetaDot = ((newCount-oldCount)*1000*2*3.1415)/((deltaT)*800);
+    
+//    oldCount = counter;
+    if(digitalRead(dt) != currentState){
+      counter ++;
+      currentDir = "CW";
+    }else{
+      counter --;
+      currentDir = "CCW";
+    }
+    rad = (counter*2*PI)/800;
+    if(rad>=6.2831){
+      rad=rad-6.2831;
+      counter = counter - 800;
+    }else if(rad<=-6.2831){
+      rad = rad+6.2831;
+      counter = counter +800;
+    }
+//    newCount=counter;
+//    tOld=millis();
+//    flag = true;
+    
+  }
+  lastState = currentState;
+  
+  
 }
