@@ -6,10 +6,13 @@ from cv2 import aruco
 import numpy
 import math
 import time
-
-quad = 0
-desired = "0.00"
-prevquad = 5
+import smbus
+import board
+import busio
+import adafruit_character_lcd.character_lcd_rgb_i2c as character_lcd
+quadrant = 5
+desired = 0
+old_quad = 0
 camera = PiCamera()
 rawCapture = PiRGBArray(camera)
 camera.iso = 100
@@ -26,8 +29,8 @@ parameters = aruco.DetectorParameters_create()
 #The below code will be using aruco marker detection in order to figure out what quadrant it is. The project description 4.5 says to use aruco marker detection
 #In order to figure how to use aruco marker detection, I used this website:https://docs.opencv.org/4.5.3/d5/dae/tutorial_aruco_detection.html
 def computervision():
-    global quad
-    global desired
+    global quadrant
+    global marker_found
     marker_found = False
     camera.capture(rawCapture, format = "bgr")
     image = rawCapture.array
@@ -49,20 +52,20 @@ def computervision():
                 Xmiddleofimage = image.shape[1]/2
                 Ymiddleofimage = image.shape[0]/2
                 if xcenter > Xmiddleofimage and ycenter > Ymiddleofimage:
-                    quadrant = 1
-                    desired = "0"
+                    quadrant = 4
+                    desired = "4.71"
                     print("This is the quadrant: ", quadrant)
                 if xcenter < Xmiddleofimage and ycenter > Ymiddleofimage:
-                    quadrant = 2
-                    desired = "1.57"
-                    print("This is the quadrant: ", quadrant)
-                if xcenter < Xmiddleofimage and ycenter < Ymiddleofimage:
                     quadrant = 3
                     desired = "3.14"
                     print("This is the quadrant: ", quadrant)
+                if xcenter < Xmiddleofimage and ycenter < Ymiddleofimage:
+                    quadrant = 2
+                    desired = "1.57"
+                    print("This is the quadrant: ", quadrant)
                 if xcenter > Xmiddleofimage and ycenter <Ymiddleofimage:
-                    quadrant = 4
-                    desired = "4.71"
+                    quadrant = 1
+                    desired = "0"
                     print("This is the quadrant: ", quadrant)
                 output_array[index] = j
                 index +=1
@@ -70,11 +73,7 @@ def computervision():
     if marker_found == False:
         print("No markers found")
         
-        import smbus
-import time
-import board
-import busio
-import adafruit_character_lcd.character_lcd_rgb_i2c as character_lcd
+
 
 #for RPI version 1, use “bus = smbus.SMBus(0)”
 bus = smbus.SMBus(1)
@@ -102,50 +101,50 @@ def readPosition():
     return number
 
 def systemIntegration():
-    #while True:
-        #position will be the number being sent to the arduino from the camera
-        old_position = 0
-        position = quadrant
-        #if not position:
-            #continue
-        if position == old_position:
-            print ("Already at position ", position)
-            lcd.color = [0,0,100]
-            lcd.text_direction = lcd.LEFT_TO_RIGHT
-            lcd.message = "Already at pos.\n " + str(position)
-            #sleep one second
-            time.sleep(2)
-            lcd.clear()
-        else:
-            writePosition(position)
-            print ("RPI: Arduino, move to position ", position)
-            lcd.color = [100,0,0]
-            lcd.text_direction = lcd.LEFT_TO_RIGHT
-            lcd.message = "Move to pos. " + str(position)
-            #sleep one second
-            time.sleep(2)
-            lcd.clear()
+    global old_quad
+    #Writes quadrant value to Arduino and LCD
+    writePosition(quadrant)
+    print ("RPI: Arduino, move to position ", quadrant)
+    lcd.color = [100,0,0]
+    lcd.text_direction = lcd.LEFT_TO_RIGHT
+    lcd.message = "Move to pos. " + str(quadrant)
+    #sleep one second
+    time.sleep(2)
+    lcd.clear()
+    #Read position from Arduino
+    number = readPosition()
+    #Compares new and old position to tell LCD what to display
+    if quadrant == old_quad:
+        print ("Already at position ", quadrant)
+        lcd.color = [0,0,100]
+        lcd.text_direction = lcd.LEFT_TO_RIGHT
+        lcd.message = "Already at pos.\n " + str(quadrant)
+        #sleep one second
+        time.sleep(2)
+        lcd.clear()
+    else:            
+        print ("Arduino: Hey RPI, I moved to ", number)
+        lcd.color = [0,100,0]
+        lcd.text_direction = lcd.LEFT_TO_RIGHT
+        lcd.message = "Moved to pos. " + str(number)
+        time.sleep(2)
+        lcd.clear()
+        lcd.color = [0,0,0]
+    old_quad = quadrant
 
-            number = readPosition()
-            #This is currently not needed I don't think but I don't wanna forget
-            #if number != old_position:
-#                print ("Arduino I moved back to ", old_position)
-#                lcd.color = [0,100,0]
- #               lcd.text_direction = lcd.LEFT_TO_RIGHT
-#                lcd.message = "Moved back to\n pos. " + str(number)
-#                time.sleep(2)
-#
-            print ("Arduino: Hey RPI, I moved to ", position)
-            lcd.color = [0,100,0]
-            lcd.text_direction = lcd.LEFT_TO_RIGHT
-            lcd.message = "Moved to pos. " + str(number)
-            time.sleep(2)
-            lcd.clear()
-            lcd.color = [0,0,0]
-            old_position = position
-                                                                               
-
-        
-while 1 ==1:
+#Infinite loop to constantly run the program
+while True:
+    #Runs CV function
     computervision()
-                
+    #Determines whether SI function should be run based off CV funtion
+    if marker_found == True:            
+        systemIntegration()
+    else:
+        print ("RPI: Marker not found.")
+        lcd.color = [100,100,0]
+        lcd.text_direction = lcd.LEFT_TO_RIGHT
+        lcd.message = "Marker not found"
+        time.sleep(2)
+        lcd.clear()
+        lcd.color = [0,0,0]
+            
