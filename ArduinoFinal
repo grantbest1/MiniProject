@@ -1,19 +1,23 @@
+//These are the included libraries in the arduino project
 #include <Wire.h>
 #include "DualMC33926MotorShield.h"
 
+//this creates a new motor object
 DualMC33926MotorShield md;
 
+
+//These are definining pins for the arduino communication with external equipment
 #define clk 2
 #define dt 3
 #define SLAVE_ADDRESS 0x04
 
+//defining global variables used in multiple functions
 int pos = 0;
 int tate = 0;
 int counter = 0;
 int currentState;
 int lastState;
 String currentDir;
-double thetaDot; // angular velocity
 
 double I = 0;
 double diff = 0;
@@ -29,6 +33,7 @@ float rad = 0;
 double Kp = 1.20661014500523;
 double Ki = 0.196673808561202; 
 
+//this will make sure that the motor sheild is working properly
 void stopIfFault()
 {
   if (md.getFault())
@@ -38,17 +43,23 @@ void stopIfFault()
   }
 }
 
+//setup
 void setup() {
+  //Making the pins input or output
   pinMode(13, OUTPUT);
   pinMode(clk, INPUT);
   pinMode(dt, INPUT);
   
+  //Initalizing the serial baud rate
   Serial.begin(9600);
   
+  //initializing the motor object
   md.init();
   
+  //interupt and clock state initialize
   lastState = digitalRead(clk);
   attachInterrupt(digitalPinToInterrupt(2), updateEncoder, CHANGE);
+  
   // initialize i2c as slave
   Wire.begin(SLAVE_ADDRESS);
 
@@ -56,12 +67,14 @@ void setup() {
   Wire.onReceive(receiveData);
   Wire.onRequest(sendData);
   
+  //Print function to make the serial output the ready 
   Serial.println("Dual MC33926 Motor Shield");
   Serial.println("Ready!");
 }
 
+//Loop function
 void loop() {
-  
+  //this will check to see what the position variable is in
   if(pos == 1){
     Serial.println("1");
     movePos(0,rad);
@@ -77,6 +90,7 @@ void loop() {
   }
 }
 
+//This will move the motor to the correct location using a PWM waveform 
 void movePos(double goal, double current){
   diff = (goal - current);
   
@@ -86,10 +100,8 @@ void movePos(double goal, double current){
   newOut = Kp*diff + Ki*I;
   int deltaU= (out-newOut)*75;
   
+  //sets the speed for the motor
   md.setM1Speed(deltaU%400);
-  Serial.print(diff);
-  Serial.print(" ");
-  Serial.println(deltaU);
   
   out=newOut;
   Ts = millis()-Tc;
@@ -110,6 +122,8 @@ void sendData() {
   Wire.write(pos);
 }
 
+//This reads the encoder in the motor and converts it to radians
+//this is also the ISR
 void updateEncoder(){
   currentState = digitalRead(clk);
 
