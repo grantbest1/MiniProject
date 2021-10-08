@@ -7,18 +7,18 @@ int lastState;
 String currentDir;
 float thetaDot; // angular velocity
 
-int tOld;
-int tNew;
-int deltaT = 0;
+int tOld; // time old
+int tNew; // time new
+int deltaT = 0; // time new - time old
 
-int gatekeeperOld = 0;
+int gatekeeperOld = 0; // only one conditional statement is accesed per ISR loop
 int gatekeeperNew = 1;
 
-bool flag = false;
+bool flag = false; // flag for printing in loop
 
 
 void setup() {
-pinMode(clk, INPUT);
+pinMode(clk, INPUT); // sets up inputs and baud rate and interrupts
 pinMode(dt, INPUT);
 Serial.begin(250000);
 lastState = digitalRead(clk);
@@ -28,27 +28,27 @@ attachInterrupt(digitalPinToInterrupt(2), updateEncoder, CHANGE);
 
 
 void loop() {
-  if(flag == true){
-  Serial.print("angular velocity is: ");
-  Serial.println(thetaDot);
-  flag = false;
+  if(flag == true){ // only prints when the ISR is immediately triggered before
+  Serial.print("angular velocity is: "); // prints angular velocity
+  Serial.println(thetaDot); // prints AV
+  flag = false; // resets flag
   }
   }
 
-void updateEncoder(){
+void updateEncoder(){ // ISR for updating encoder
   currentState = digitalRead(clk);
 
 
-  if(currentState != lastState && currentState == 1){
-    if(gatekeeperOld == 0){
+  if(currentState != lastState && currentState == 1){ // conditional to read the encoder
+    if(gatekeeperOld == 0){ 
       tNew = millis();
-      gatekeeperNew = 0;
-      gatekeeperOld = 1;
-      deltaT = tNew - tOld;
-      thetaDot = (counter*2*3.14)/(800*deltaT);
+      gatekeeperNew = 0; // resets gates 
+      gatekeeperOld = 1; // resets gates
+      deltaT = tNew - tOld; // difference between time
+      thetaDot = (counter*2*3.14)/(800*deltaT); // calculates angular velocity
     }
 
-    if(digitalRead(dt) != currentState){
+    if(digitalRead(dt) != currentState){ // increments encoder counts (either increasing or decreasing based on direction
       counter --;
       currentDir = "CCW";
     }
@@ -59,7 +59,7 @@ void updateEncoder(){
   }
   lastState = currentState;
 
-  if(gatekeeperNew == 0){
+  if(gatekeeperNew == 0){ // second conditional to capture time and set the flag to print angular velocity
     tOld = millis();
     gatekeeperOld = 0;
     gatekeeperNew = 1;
