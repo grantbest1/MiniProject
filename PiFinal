@@ -97,15 +97,18 @@ lcd.clear()
 #this is the address we setup in the Arduino Program
 address = 0x04
 
+#Function to write position to the arduino
 def writePosition(value):
     bus.write_byte(address, value)
     return -1
 
+#Function to read position back from Arduino
 def readPosition():
     number = bus.read_byte(address)
     return number
 
 def systemIntegration():
+    #Defines old_quad as a global variable to be used later
     global old_quad
     #Writes quadrant value to Arduino and LCD
     writePosition(quadrant)
@@ -121,11 +124,15 @@ def systemIntegration():
     #Compares new and old position to tell LCD what to display
     if quadrant == old_quad:
         print ("Already at position ", quadrant)
+        #Sets LCD color
         lcd.color = [0,0,100]
+        #Sets direction to display text on LCD
         lcd.text_direction = lcd.LEFT_TO_RIGHT
+        #Message to be displayed on LCD
         lcd.message = "Already at pos.\n " + str(quadrant)
         #sleep one second
         time.sleep(2)
+        #Clear LCD
         lcd.clear()
     else:            
         print ("Arduino: Hey RPI, I moved to ", number)
