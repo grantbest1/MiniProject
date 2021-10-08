@@ -36,6 +36,7 @@ def computervision():
     image = rawCapture.array
     display = rawCapture.array
     cv2.cvtColor(image,cv2.COLOR_RGB2GRAY)
+    #Here is where I used the aruco markers in order to to find the indexes of where marker was.
     corners,ids,rejectedImgPoints = aruco.detectMarkers(image,aruco_dictionary, parameters=parameters)
     if type(ids) == numpy.ndarray:
         marker_found = True
@@ -43,14 +44,18 @@ def computervision():
         index = 0
         for i in ids:
             for j in i:
+            #The following uses corners and then averages the different x values to get the center of the marker horizontally
                 xdirection1 =(corners[index][0][1][0] + corners[index][0][0][0])/2
                 xdirection2 = (corners[index][0][2][0] + corners[index][0][3][0])/2
                 xcenter = (xdirection1 + xdirection2)/2
+            #The following uses corners and then averages the different y values to get the center of the marker vertically   
                 ydirection1 = (corners[index][0][1][1] + corners[index][0][2][1])/2
                 ydirection2 = (corners[index][0][3][1] + corners[index][0][0][1])/2
                 ycenter = (ydirection1 + ydirection2)/2
+                #after finding the centers of the marker, find the centers of the entire picture taken
                 Xmiddleofimage = image.shape[1]/2
                 Ymiddleofimage = image.shape[0]/2
+                #These if statements were used in order to assign quadrants depending on the values of the centers of the aruco marker.
                 if xcenter > Xmiddleofimage and ycenter > Ymiddleofimage:
                     quadrant = 4
                     desired = "4.71"
